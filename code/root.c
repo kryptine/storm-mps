@@ -137,6 +137,10 @@ Bool RootCheck(Root root)
     /* Can't check anything about stackCold. */
     break;
 
+  case RootTHREAD:
+    /* Added by fstromback: crashes when using mps_root_create_thread_scanned() if not present. */
+    break;
+
   case RootFMT:
     CHECKL(root->the.fmt.scan != NULL);
     CHECKL(root->the.fmt.base != 0);
