@@ -728,7 +728,7 @@ void PoolNoWalk(Pool pool, Seg seg, FormattedObjectsVisitor f,
   UNUSED(p);
   UNUSED(s);
 
-  NOTREACHED;
+  // NOTREACHED;
 }
 
 
