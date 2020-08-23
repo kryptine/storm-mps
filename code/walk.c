@@ -83,6 +83,48 @@ static void ArenaFormattedObjectsWalk(Arena arena, FormattedObjectsVisitor f,
   }
 }
 
+/* ArenaFormattedObjectsWalkRW -- iterate over all objects, taking modifications into account
+ *
+ * So called because it walks all formatted objects in an arena. */
+
+static void ArenaFormattedObjectsWalkRW(Arena arena, FormattedObjectsVisitor f,
+                                        void *p, size_t s)
+{
+  Seg seg;
+  FormattedObjectsStepClosure c;
+  Format format;
+
+  AVERT(Arena, arena);
+  AVER(FUNCHECK(f));
+  AVER(f == ArenaFormattedObjectsStep);
+  /* Know that p is a FormattedObjectsStepClosure  */
+  c = p;
+  AVERT(FormattedObjectsStepClosure, c);
+  /* Know that s is UNUSED_SIZE */
+  AVER(s == UNUSED_SIZE);
+
+  if (SegFirst(&seg, arena)) {
+    do {
+      if (PoolFormat(&format, SegPool(seg))) {
+        ShieldExpose(arena, seg);
+        SegWalk(seg, format, f, p, s);
+
+        /* Is the segment write-protected? If so,
+         * simulate a write to update summaries etc. */
+        if (SegSM(seg) & AccessWRITE) {
+          /* We could use:
+           * TraceSegAccess(arena, seg, AccessWRITE);
+           * but that will affect future barrier behavior.
+           * All it does is essentially the following,
+           * which seems to be enough. */
+          SegSetSummary(seg, RefSetUNIV);
+        }
+        ShieldCover(arena, seg);
+      }
+    } while (SegNext(&seg, arena, seg));
+  }
+}
+
 
 /* mps_arena_formatted_objects_walk -- iterate over all objects
  *
@@ -107,6 +149,27 @@ void mps_arena_formatted_objects_walk(mps_arena_t mps_arena,
   ArenaLeave(arena);
 }
 
+/* mps_arena_formatted_objects_walk_rw -- iterate over all objects, taking modifications into account
+ *
+ * Client interface to ArenaFormattedObjectsWalkRw.  */
+
+void mps_arena_formatted_objects_walk_rw(mps_arena_t mps_arena,
+                                         mps_formatted_objects_stepper_t f,
+                                         void *p, size_t s)
+{
+  Arena arena = (Arena)mps_arena;
+  FormattedObjectsStepClosureStruct c;
+
+  ArenaEnter(arena);
+  AVERT(Arena, arena);
+  AVER(FUNCHECK(f));
+  c.sig = FormattedObjectsStepClosureSig;
+  c.f = f;
+  c.p = p;
+  c.s = s;
+  ArenaFormattedObjectsWalkRW(arena, ArenaFormattedObjectsStep, &c, UNUSED_SIZE);
+  ArenaLeave(arena);
+}
 
 
 /* Root Walking

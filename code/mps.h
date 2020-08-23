@@ -786,6 +786,9 @@ typedef void (*mps_formatted_objects_stepper_t)(mps_addr_t, mps_fmt_t,
 extern void mps_arena_formatted_objects_walk(mps_arena_t,
                                              mps_formatted_objects_stepper_t,
                                              void *, size_t);
+extern void mps_arena_formatted_objects_walk_rw(mps_arena_t,
+                                                mps_formatted_objects_stepper_t,
+                                                void *, size_t);
 
 
 /* Root Walking */
