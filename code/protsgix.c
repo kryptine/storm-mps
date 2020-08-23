@@ -72,9 +72,12 @@ static struct sigaction sigNext;
 static void sigHandle(int sig, siginfo_t *info, void *uap)  /* .sigh.args */
 {
   int e;
+  int olderrno;
   /* sigset renamed to asigset due to clash with global on Darwin. */
   sigset_t asigset, oldset;
   struct sigaction sa;
+
+  olderrno = errno;
 
   AVER(sig == PROT_SIGNAL);
 
@@ -112,6 +115,8 @@ static void sigHandle(int sig, siginfo_t *info, void *uap)  /* .sigh.args */
   AVER(e == 0);
   e = sigaction(PROT_SIGNAL, &sa, NULL);
   AVER(e == 0);
+
+  errno = olderrno;
 }
 
 
