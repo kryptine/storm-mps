@@ -73,7 +73,10 @@ static void suspendSignalHandler(int sig,
 {
     sigset_t signal_set;
     ucontext_t ucontext;
+    int olderrno;
     MutatorContextStruct context;
+
+    olderrno = errno;
 
     AVER(sig == PTHREADEXT_SIGSUSPEND);
     UNUSED(sig);
@@ -91,6 +94,7 @@ static void suspendSignalHandler(int sig,
     sem_post(&pthreadextSem);
     sigsuspend(&signal_set);
 
+    errno = olderrno;
     /* Once here, the resume signal handler has run to completion. */
 }
 
