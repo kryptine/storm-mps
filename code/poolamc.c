@@ -1864,6 +1864,19 @@ static void amcSegWalk(Seg seg, Format format, FormattedObjectsVisitor f,
       object = nextObject;
     }
     AVER(object == limit);
+
+    if (SegRankSet(seg) != RankSetEMPTY) {
+      mps_ss_s scanState;
+
+      /* set up the scan state to not call FIX2 */
+      scanState._zs = pool->arena->zoneShift;
+      scanState._w = 0;
+      scanState._ufs = 0;
+      (*format->scan)(&scanState, AddrAdd(SegBase(seg), format->headerSize), limit);
+
+      /* save it in the segment summary */
+      SegSetSummary(seg, (RefSet)scanState._ufs);
+    }
   }
 }
 

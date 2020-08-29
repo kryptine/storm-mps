@@ -634,6 +634,19 @@ static void sncSegWalk(Seg seg, Format format, FormattedObjectsVisitor f,
       object = nextObject;
     }
     AVER(object == limit);
+
+    if (SegRankSet(seg) != RankSetEMPTY) {
+      mps_ss_s scanState;
+
+      /* set up the scan state to not call FIX2 */
+      scanState._zs = pool->arena->zoneShift;
+      scanState._w = 0;
+      scanState._ufs = 0;
+
+      /* scan and update segment summary */
+      (*format->scan)(&scanState, SegBase(seg), limit);
+      SegSetSummary(seg, (RefSet)scanState._ufs);
+    }
   }
 }
 

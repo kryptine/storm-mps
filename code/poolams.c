@@ -1637,6 +1637,7 @@ static void amsSegWalk(Seg seg, Format format, FormattedObjectsVisitor f,
   AMSSeg amsseg = MustBeA(AMSSeg, seg);
   Pool pool = SegPool(seg);
   Addr object, base, limit;
+  mps_ss_s scanState;
 
   AVERT(Format, format);
   AVER(FUNCHECK(f));
@@ -1645,6 +1646,11 @@ static void amsSegWalk(Seg seg, Format format, FormattedObjectsVisitor f,
   base = SegBase(seg);
   object = base;
   limit = SegLimit(seg);
+
+  /* set up the scan state to not call FIX2 */
+  scanState._zs = pool->arena->zoneShift;
+  scanState._w = 0;
+  scanState._ufs = 0;
 
   while (object < limit) {
     /* object is a slight misnomer because it might point to a free grain */
@@ -1673,10 +1679,17 @@ static void amsSegWalk(Seg seg, Format format, FormattedObjectsVisitor f,
     next = format->skip(object);
     next = AddrSub(next, format->headerSize);
     AVER(AddrIsAligned(next, PoolAlignment(pool)));
-    if (!amsseg->colourTablesInUse || !AMS_IS_WHITE(seg, i))
+    if (!amsseg->colourTablesInUse || !AMS_IS_WHITE(seg, i)) {
       (*f)(object, pool->format, pool, p, s);
+      if (SegRankSet(seg) != RankSetEMPTY)
+        (*format->scan)(&scanState, object, AddrAdd(next, format->headerSize));
+    }
     object = next;
   }
+
+  /* update the segment summary */
+  if (SegRankSet(seg) != RankSetEMPTY)
+    SegSetSummary(seg, (RefSet)scanState._ufs);
 }
 
 

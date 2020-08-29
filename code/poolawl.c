@@ -1174,6 +1174,7 @@ static void awlSegWalk(Seg seg, Format format, FormattedObjectsVisitor f,
   AWLSeg awlseg = MustBeA(AWLSeg, seg);
   Pool pool = SegPool(seg);
   Addr object, base, limit;
+  mps_ss_s scanState;
 
   AVERT(Format, format);
   AVER(FUNCHECK(f));
@@ -1182,6 +1183,11 @@ static void awlSegWalk(Seg seg, Format format, FormattedObjectsVisitor f,
   base = SegBase(seg);
   object = base;
   limit = SegLimit(seg);
+
+  /* set up the scan state to never call FIX2 */
+  scanState._zs = pool->arena->zoneShift;
+  scanState._w = 0;
+  scanState._ufs = 0;
 
   while(object < limit) {
     /* object is a slight misnomer because it might point to a */
@@ -1211,10 +1217,17 @@ static void awlSegWalk(Seg seg, Format format, FormattedObjectsVisitor f,
     next = format->skip(object);
     next = AddrSub(next, format->headerSize);
     AVER(AddrIsAligned(next, PoolAlignment(pool)));
-    if (BTGet(awlseg->mark, i) && BTGet(awlseg->scanned, i))
+    if (BTGet(awlseg->mark, i) && BTGet(awlseg->scanned, i)) {
       (*f)(object, pool->format, pool, p, s);
+      if (SegRankSet(seg) != RankSetEMPTY)
+        (*format->scan)(&scanState, object, AddrAdd(next, format->headerSize));
+    }
     object = next;
   }
+
+  /* update the segment summary */
+  if (SegRankSet(seg) != RankSetEMPTY)
+    SegSetSummary(seg, (RefSet)scanState._ufs);
 }
 
 
